@@ -25,7 +25,7 @@ The simple metrics returned - status code and response time - allow us to easily
 
 ## Run the app without fault injection
 
-Run the app without fault injection. You should receive results something like this:
+Run the app without fault injection. If in Visual Studio, starting the app should open a web page calling `/monitoring/status`.  If it doesn't, navigate to that endpoint manually. You should receive results something like this:
 
 ```
 [
@@ -74,7 +74,7 @@ Which operation within your app these chaos settings apply to.  Each call site i
     Context context = new Context("FooOperationKey");
 
 
-This is simply a string tag you choose, to identify different call paths in your app.
+This is simply a string tag you choose, to identify different call paths in your app.  Steps to attach this further to your http call are shown in the sample app.
 
 #### Enabled
 
@@ -113,18 +113,18 @@ The sample app is constructed using `IOptionsSnapshot<>` so that adjusting the s
       ]
     } 
 
-#### Expected result
+#### Expected result (/monitoring/status)
 
     {"results":[{"url":"http://www.google.co.uk/","value":503},{"url":"http://www.bbc.co.uk/","value":503}]}
 
-> _Note:_ The sample app is configured with a limited resilience policy during startup which retries typical failure status codes a couple of times.  Therefore, do not be surprised if you configure a 50% injection rate (`"InjectionRate": 0.5`) for a 503 code but see 503s actually surfacing less frequently in the demo - the resilience policy will be handling _some_ of them.
+> _Note:_ During startup the sample app configures a limited resilience policy which retries typical failure status codes a couple of times.  Therefore, do not be surprised if you configure a 50% injection rate (`"InjectionRate": 0.5`) for a 503 code but see 503s actually surfacing less frequently in the demo - the resilience policy will be handling _some_ of them.
 
 ### Complete example: Inject latency 
 
     "ChaosSettings": {
         "OperationChaosSettings": [
         {
-            "OperationKey": "Status",
+            "OperationKey": "ResponseTime",
             "Enabled": true,
             "InjectionRate": 1,
             "LatencyMs": 2000,
@@ -132,7 +132,7 @@ The sample app is constructed using `IOptionsSnapshot<>` so that adjusting the s
       ]
     } 
 
-#### Expected result
+#### Expected result (/monitoring/responsetime)
 
     {"results":[{"url":"http://www.google.co.uk/","value":2262},{"url":"http://www.bbc.co.uk/","value":2526}]}
 
@@ -149,18 +149,28 @@ The sample app is constructed using `IOptionsSnapshot<>` so that adjusting the s
       ]
     } 
 
-#### Expected result
+#### Expected result (/monitoring/status)
 
     An unhandled exception occurred while processing the request.
     OperationCanceledException: The operation was canceled.
 
+## How the sample app injects the chaos
+
+Calls guarded by Polly policies often wrap a series of policies around a call using `PolicyWrap`.  The policies in the PolicyWrap act as nesting middleware around the outbound call.
+
+The recommended technique for introducing `Simmy` is to use one or more Simmy chaos policies as the _innermost_ policies in a `PolicyWrap`.
+
+By placing the chaos policies innermost, they subvert the usual outbound call at the last minute, substituting their fault or adding extra latency.
+
+The existing Polly policies - further out in the PolicyWrap - still apply, so you can test how the Polly resilience you have configured handles the chaos/faults injected by Simmy.
+
 ## Experimenting with adjusting resilience policies to handle injected faults (a simple example)
 
-The sample app is intentionally undefended from exceptions, so that you can see the exception surface in the examples above.
+The sample app is intentionally undefended from exceptions, so that you can see the exceptions surface in the examples above.
 
 Now you can experiment with changing the resilience in your app to handle the faults that occur.  
 
-First, in `appsettings.json`, change the injection rate for `OperationCanceledException` so that it is 50% of the time: `"InjectionRate": 0.5`.  
+First, in `appsettings.json`, change the injection rate for `OperationCanceledException` to inject faults 50% of the time: `"InjectionRate": 0.5`.  
 
 Run the endpoint and you should see many calls fail with `OperationCanceledException`.
 
@@ -172,19 +182,11 @@ Now, in the sample app, in the method `GetResiliencePolicy()`, change the retry 
 
 Running the endpoint with the extra configured resilience should significantly reduce the number of `OperationCanceledException` which actually surface to the caller as errors.
 
-## How the sample app injects the chaos
-
-Calls guarded by Polly policies often wrap a series of policies around a call using `PolicyWrap`.  The policies in the PolicyWrap act as nesting middleware around the outbound call.
-
-The recommended technique for introducing `Simmy` is to use one or more Simmy chaos policies the _innermost_ policies in a `PolicyWrap`.
-
-By placing the chaos policies innermost, they subvert the usual outbound call at the last minute, substituting their fault or adding extra latency.
-
-The existing Polly policies - further out in the PolicyWrap - still apply, so you can test how the Polly resilience you have configured handles the chaos/faults injected by Simmy.
+This is an intentionally simplistic example to demonstrate iterating a feedback loop from experimenting with faults to adjusting policies. Of course, you can run far more sophisticated chaos experiments on a real app: introducing 100ms latency to all database calls briefly, and see if your retry/circuit-breaker policies are configured to give a good customer experience in those circumstances; block all calls to a recommendations subsystem - whatever.
 
 ## Adding Simmy chaos without changing existing configuration code
 
-As just mentioned, the usual technique to add chaos-injection is to configure Simmy policies innermost in your app's `PolicyWrap`s.
+As mentioned above, the usual technique to add chaos-injection is to configure Simmy policies innermost in your app's `PolicyWrap`s.
 
 One of the simplest ways to do this all across your app is to make all policies used in your app be stored in and drawn from `PolicyRegistry`.  This is the technique demonstrated in this sample app.
 
@@ -199,7 +201,7 @@ Typed-clients are configured on `HttpClientFactory`, which will use policies fro
         .AddPolicyHandlerFromRegistry("ResiliencePolicy");
 
 
-> (_If using Simmy without HttpClientFactory_, simply pass the `PolicyRegistry` by DI into the components making outbound calls, and pull the appropriate policy out of `PolicyRegistry` at the call site.)
+> (_When using Polly and Simmy without HttpClientFactory_, simply pass the `PolicyRegistry` by DI into the components making outbound calls, and pull the appropriate policy out of `PolicyRegistry` at the call site.)
 
 If you have taken the above `PolicyRegistry`-driven approach, the sample app demonstrates a very simple technique that can be used to add Simmy throughout your app, .  The `AddChaosInjectors()` extension method on `IPolicyRegistry<>` simply takes every policy in your `PolicyRegistry` and wraps Simmy policies (as the innermost policy) inside.  
 
@@ -225,7 +227,7 @@ The use of `chaossettings.json` here as the source to control fault/chaos
 injection is just one technique. 
 
 + Any other config source can equally be used to populate an `IOptions<>`;
-+ A (suitably secured) http endpoint could be used to set chaos settings.
++ An http endpoint (suitably secured!) could be used to set chaos settings.
 
 ## Filtering how and what chaos is applied using constructs particular to your app
 
@@ -235,9 +237,9 @@ You can therefore build policies to control chaos based on _any_ custom data par
 
 For example, it may be that the urls of downstream systems in your app follow certain patterns, and you filter on the url to introduce chaos to only certain subsystems, or only certain primaries/failovers.
 
-Or you might choose to whitelist or blacklist certain paths, so that chaos is only introduced for your test callers but not for your live customers.
+Or you might choose to whitelist or blacklist certain callers, so that chaos is only introduced for your test callers but not for your live customers.
 
-All dimensions of the chaos policy - whether it is enabled, what proportion of calls should be affected, and what chaos should be injected - can be inflected by data set on the `Context` passed to execution.
+Every parameter of the chaos policy exists in a form taking a `Func<Context, ...>` for configuration, so all dimensions of the chaos policy - whether it is enabled, what proportion of calls should be affected, and what chaos should be injected - can be inflected by data set on the `Context` passed to execution.
 
 ## Going beyond http calls
 
