@@ -5,9 +5,8 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Polly;
+using Polly.Contrib.Simmy;
 using Polly.Registry;
-using Simmy;
-
 using SimmyDemo_WebApi.Chaos;
 
 namespace SimmyDemo_WebApi
@@ -74,8 +73,6 @@ namespace SimmyDemo_WebApi
         {
             OperationChaosSetting chaosSettings = context.GetOperationChaosSettings();
             if (chaosSettings == null) return NoExceptionResult;
-
-            if (String.IsNullOrWhiteSpace(chaosSettings.Exception)) return NoExceptionResult;
 
             string exceptionName = chaosSettings.Exception;
             if (String.IsNullOrWhiteSpace(exceptionName)) return NoExceptionResult;
