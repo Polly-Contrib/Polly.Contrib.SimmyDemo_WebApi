@@ -44,7 +44,7 @@ Run the app without fault injection. If in Visual Studio, starting the app shoul
 
 Open the file `chaossettings.json` in the root folder of the app.  The file can be configured with fault-injection settings for any number of call sites within your app.  
 
-`chaossettings.json` is a json array, looking something like this:
+`appsettings.json` is a json array, looking something like this:
 
     "ChaosSettings": {
         "OperationChaosSettings": [
