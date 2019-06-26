@@ -42,9 +42,7 @@ Run the app without fault injection. If in Visual Studio, starting the app shoul
 
 ## Injecting faults or chaos
 
-Open the file `chaossettings.json` in the root folder of the app.  The file can be configured with fault-injection settings for any number of call sites within your app.  
-
-`chaossettings.json` is a json array, looking something like this:
+Open the file `appsettings.json` in the root folder of the app and look for the region `"ChaosSettings": { }`.  This can be configured with fault-injection settings for any number of call sites within your app:
 
     "ChaosSettings": {
         "OperationChaosSettings": [
@@ -64,6 +62,8 @@ Open the file `chaossettings.json` in the root folder of the app.  The file can 
         }
       ]
     } 
+
+_The use of_ `appsettings.json` _here to drive chaos is just the simplest-possible technique to provide a demo of varying chaos settings which is self-contained and can be run locally.  In a production environment, you are likely to want to drive chaos settings from an easier-to-manipulate source._
 
 The elements are:
 
@@ -223,10 +223,9 @@ The code lines above also demonstrate a construct to ensure that fault-injection
 
 ## Using other sources to control chaos settings
 
-The use of `chaossettings.json` here as the source to control fault/chaos
-injection is just one technique. 
+The use of `chaossettings.json` here is just the simplest-possible technique to provide a self-contained demo of varying chaos settings, which can be run locally.  In a production environment, you are likely not to be wanting to vary appsettings to control chaos.
 
-+ Any other config source can equally be used to populate an `IOptions<>`;
++ Any other config source can equally be used drive chaos settings;
 + An http endpoint (suitably secured!) could be used to set chaos settings.
 
 ## Filtering how and what chaos is applied using constructs particular to your app
