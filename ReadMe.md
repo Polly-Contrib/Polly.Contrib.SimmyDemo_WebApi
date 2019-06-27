@@ -1,8 +1,12 @@
 # Simmy sample app
 
-This repo presents an intentionally simple example .NET Core WebAPI app demonstrating Simmy.
+[Simmy](https://github.com/Polly-Contrib/Simmy) is a chaos-engineering and fault-injection tool, integrating with the Polly resilience project for .NET. Simmy allows you to introduce a chaos-injection policy or policies at any location where you execute code through Polly.
 
-The app demonstrates the following patterns with Simmy:
+This repo presents an intentionally simple example .NET Core WebAPI app demonstrating Simmy (originally put together as a simple demo for use in conference presentations).
+
+>_Be sure also to check out the [introductory blog post](http://elvanydev.com/chaos-injection-with-simmy/) and [demo](https://github.com/vany0114/chaos-injection-using-simmy) from lead contributor [Geovanny Alzate Sandoval](https://github.com/vany0114), if you want a more developed example demonstrating Simmy among a set of distributed microservices run from Docker containers._
+
+The app in this repo demonstrates the following patterns with Simmy:
 
 + Configuring `StartUp` so that Simmy chaos policies are only introduced in builds for certain environments (for instance, Dev but not Prod)
 + Configuring Simmy chaos policies to be injected into the app without changing any existing configuration code
