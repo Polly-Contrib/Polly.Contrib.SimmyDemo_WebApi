@@ -31,8 +31,10 @@ namespace SimmyDemo_WebApi
             services.Configure<MonitoringSettings>(Configuration.GetSection("MonitoringEndpoints"));
 
             // Create (and register with DI) a policy registry containing some policies we want to use.
-            var policyRegistry = services.AddPolicyRegistry();
-            policyRegistry[ResiliencePolicy] = GetResiliencePolicy();
+            services.AddPolicyRegistry(new PolicyRegistry
+            {
+                { ResiliencePolicy, GetResiliencePolicy() }
+            });
 
             // Register a typed client via HttpClientFactory, set to use the policy we placed in the policy registry.
             services.AddHttpClient<ResilientHttpClient>(client =>
@@ -71,7 +73,7 @@ namespace SimmyDemo_WebApi
 
         private IAsyncPolicy<HttpResponseMessage> GetResiliencePolicy()
         {
-            // Define a couple of policies which will form our resilience strategy.  These could be anything.  The settings for them could obviously be drawn from config too.
+            // Define a policy which will form our resilience strategy.  These could be anything.  The settings for them could obviously be drawn from config too.
             var retry = HttpPolicyExtensions.HandleTransientHttpError()
                 .RetryAsync(2);
 
