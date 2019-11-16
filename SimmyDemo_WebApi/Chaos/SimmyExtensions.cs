@@ -35,11 +35,11 @@ namespace SimmyDemo_WebApi
                 {
                     registry[policyEntry.Key] = policy
                             .WrapAsync(MonkeyPolicy.InjectFaultAsync<HttpResponseMessage>(
-                                (ctx, ct) => GetException(ctx, ct),
+                                GetException,
                                 GetInjectionRate,
                                 GetEnabled))
                             .WrapAsync(MonkeyPolicy.InjectFaultAsync<HttpResponseMessage>(
-                                (ctx, ct) => GetHttpResponseMessage(ctx, ct),
+                                GetHttpResponseMessage,
                                 GetInjectionRate,
                                 GetHttpResponseEnabled))
                             .WrapAsync(MonkeyPolicy.InjectLatencyAsync<HttpResponseMessage>(
@@ -53,7 +53,7 @@ namespace SimmyDemo_WebApi
             return registry;
         }
 
-        private static Task<bool> GetEnabled(Context context)
+        private static Task<bool> GetEnabled(Context context, CancellationToken token)
         {
             OperationChaosSetting chaosSettings = context.GetOperationChaosSettings();
             if (chaosSettings == null) return NotEnabled;
@@ -61,7 +61,7 @@ namespace SimmyDemo_WebApi
             return Task.FromResult(chaosSettings.Enabled);
         }
 
-        private static Task<Double> GetInjectionRate(Context context)
+        private static Task<Double> GetInjectionRate(Context context, CancellationToken token)
         {
             OperationChaosSetting chaosSettings = context.GetOperationChaosSettings();
             if (chaosSettings == null) return NoInjectionRate;
@@ -93,11 +93,11 @@ namespace SimmyDemo_WebApi
             }
         }
 
-        private static Task<bool> GetHttpResponseEnabled(Context context)
+        private static Task<bool> GetHttpResponseEnabled(Context context, CancellationToken token)
         {
             if (GetHttpResponseMessage(context, CancellationToken.None) == NoHttpResponse) return NotEnabled;
 
-            return GetEnabled(context);
+            return GetEnabled(context, token);
         }
 
         private static Task<HttpResponseMessage> GetHttpResponseMessage(Context context, CancellationToken token)
