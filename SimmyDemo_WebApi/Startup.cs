@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Polly;
 using Polly.Extensions.Http;
 using Polly.Registry;
@@ -25,7 +26,9 @@ namespace SimmyDemo_WebApi
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            services.AddMvc()
+                .AddMvcOptions(options => options.EnableEndpointRouting = false)
+                .SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
 
             // Read the endpoints we expect the service to monitor.
             services.Configure<MonitoringSettings>(Configuration.GetSection("MonitoringEndpoints"));
@@ -47,7 +50,7 @@ namespace SimmyDemo_WebApi
             services.Configure<AppChaosSettings>(Configuration.GetSection("ChaosSettings"));
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
