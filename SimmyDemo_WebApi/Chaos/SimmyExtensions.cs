@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Polly;
 using Polly.Contrib.Simmy;
+using Polly.Contrib.Simmy.Latency;
+using Polly.Contrib.Simmy.Outcomes;
 using Polly.Registry;
 using SimmyDemo_WebApi.Chaos;
 
@@ -34,19 +36,18 @@ namespace SimmyDemo_WebApi
                 if (policyEntry.Value is IAsyncPolicy<HttpResponseMessage> policy)
                 {
                     registry[policyEntry.Key] = policy
-                            .WrapAsync(MonkeyPolicy.InjectFaultAsync<HttpResponseMessage>(
-                                GetException,
-                                GetInjectionRate,
-                                GetEnabled))
-                            .WrapAsync(MonkeyPolicy.InjectFaultAsync<HttpResponseMessage>(
-                                GetHttpResponseMessage,
-                                GetInjectionRate,
-                                GetHttpResponseEnabled))
-                            .WrapAsync(MonkeyPolicy.InjectLatencyAsync<HttpResponseMessage>(
-                                GetLatency,
-                                GetInjectionRate,
-                                GetEnabled))
-                        ;
+                            .WrapAsync(MonkeyPolicy.InjectExceptionAsync(with =>
+                                with.Fault<HttpResponseMessage>(GetException)
+                                    .InjectionRate(GetInjectionRate)
+                                    .EnabledWhen(GetEnabled)))
+                            .WrapAsync(MonkeyPolicy.InjectResultAsync<HttpResponseMessage>(with =>
+                                with.Result(GetHttpResponseMessage)
+                                    .InjectionRate(GetInjectionRate)
+                                    .EnabledWhen(GetHttpResponseEnabled)))
+                            .WrapAsync(MonkeyPolicy.InjectLatencyAsync<HttpResponseMessage>(with => 
+                                with.Latency(GetLatency)
+                                    .InjectionRate(GetInjectionRate)
+                                    .EnabledWhen(GetEnabled)));
                 }
             }
 
