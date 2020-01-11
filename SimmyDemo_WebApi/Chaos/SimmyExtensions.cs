@@ -43,7 +43,7 @@ namespace SimmyDemo_WebApi
                             .WrapAsync(MonkeyPolicy.InjectResultAsync<HttpResponseMessage>(with =>
                                 with.Result(GetHttpResponseMessage)
                                     .InjectionRate(GetInjectionRate)
-                                    .EnabledWhen(GetEnabled)))
+                                    .EnabledWhen(GetHttpResponseEnabled)))
                             .WrapAsync(MonkeyPolicy.InjectLatencyAsync<HttpResponseMessage>(with => 
                                 with.Latency(GetLatency)
                                     .InjectionRate(GetInjectionRate)
